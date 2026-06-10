@@ -1,0 +1,11 @@
+# Flutter
+mobile/build/
+mobile/.dart_tool/
+
+# Node
+boracultivar-backend/node_modules/
+boracultivar-backend/.env
+
+# IDE
+.vscode/
+.idea/
