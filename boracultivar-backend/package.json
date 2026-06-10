@@ -1,0 +1,23 @@
+{
+  "name": "boracultivar-backend",
+  "version": "1.0.0",
+  "description": "Backend unificado do projeto Bora Cultivar - Mobile e Web",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "@tensorflow/tfjs": "^4.22.0",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.19.2",
+    "jimp": "^1.6.1",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.1.1",
+    "mysql2": "^3.22.5",
+    "sharp": "^0.34.5"
+  }
+}
