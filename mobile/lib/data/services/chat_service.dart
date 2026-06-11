@@ -1,22 +1,21 @@
-// lib/data/services/chat_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
- 
+import 'package:flutter/foundation.dart';
+
 class ChatService {
-  // Detecta automaticamente o ambiente correto:
-  // - Emulador Android usa 10.0.2.2 para chegar ao localhost do PC
-  // - iOS Simulator e Web usam localhost normalmente
-  static String get _baseUrl {
-    if (kIsWeb) return 'http://localhost:3000';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3000';
-    return 'http://localhost:3000';
-  }
- 
+  // 1. URL de produção (Render)
+  static const String _prodUrl = 'https://bora-cultivar-api.onrender.com';
+
+  // 2. Ajuste para o Emulador: 10.0.2.2 é o padrão para Android
+  static const String _devUrl =
+      kIsWeb ? 'http://localhost:3000' : 'http://10.0.2.2:3000';
+
+  // 3. Getter inteligente
+  static String get _baseUrl => kReleaseMode ? _prodUrl : _devUrl;
+
   Future<String> sendMessageToFlora(String message) async {
     final url = Uri.parse('$_baseUrl/chat');
- 
+
     try {
       final response = await http
           .post(
@@ -24,31 +23,25 @@ class ChatService {
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({'message': message}),
           )
-          .timeout(
-            const Duration(seconds: 20),
-            onTimeout: () => throw Exception('timeout'),
-          );
- 
+          .timeout(const Duration(seconds: 40));
+
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data =
-            jsonDecode(utf8.decode(response.bodyBytes));
-        return data['reply'] as String? ??
-            'Flora está pensativa... Tente novamente. 🌿';
+        // Uso de utf8.decode para garantir caracteres especiais como ç e ã
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        return data['reply']?.toString() ?? 'Flora está pensativa...';
       }
- 
-      // Trata erros do backend com mensagens amigáveis
-      if (response.statusCode == 503) {
-        final Map<String, dynamic> data =
-            jsonDecode(utf8.decode(response.bodyBytes));
-        return '⚠️ ${data['error'] ?? 'Serviço temporariamente indisponível.'}';
-      }
- 
-      return 'Erro na comunicação com a Flora (Status: ${response.statusCode})';
+
+      return 'Servidor indisponível (Erro ${response.statusCode})';
+    } on http.ClientException catch (e) {
+      // Diferencia erro de rede de outros erros
+      debugPrint("Erro de conexão HTTP: $e");
+      return 'Erro de conexão: Verifique se o servidor está online.';
     } on Exception catch (e) {
-      if (e.toString().contains('timeout')) {
-        return 'A Flora demorou para responder. Verifique sua conexão e tente novamente. 🌿';
+      if (e.toString().contains('TimeoutException')) {
+        return 'A Flora demorou a responder. O servidor pode estar "acordando". Tente novamente!';
       }
-      return 'Não consegui conectar ao servidor. Verifique sua conexão. 🌿';
+      debugPrint("Erro inesperado: $e");
+      return 'Erro inesperado: Ocorreu um problema ao comunicar com a Flora.';
     }
   }
 }
