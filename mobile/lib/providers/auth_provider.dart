@@ -1,72 +1,68 @@
-// CORREÇÃO 1: Imports obrigatórios estavam ausentes — ChangeNotifier e AuthService
-//             nunca foram importados, causando erro de compilação imediato.
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../data/services/auth_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
-  Map<String, dynamic>? _user;
   bool _isLoading = false;
 
-  Map<String, dynamic>? get user => _user;
   bool get isLoading => _isLoading;
 
-  // CORREÇÃO 2: Bloco try sem catch deixava exceções silenciosas.
-  //             A exceção agora é relançada para que a UI exiba o erro.
+  // Retorna o usuário como um Map para compatibilidade com os controllers de UI
+  Map<String, dynamic>? get user {
+    final u = Supabase.instance.client.auth.currentUser;
+    if (u == null) return null;
+    return {
+      'id': u.id,
+      'email': u.email,
+      'nome': u.userMetadata?['nome'] ?? '',
+    };
+  }
+
   Future<void> login(String email, String password) async {
     _isLoading = true;
     notifyListeners();
     try {
-      final data = await _authService.login(email, password);
-      _user = data['usuario'];
-    } catch (e) {
-      rethrow;
+      await _authService.login(email, password);
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // CORREÇÃO 12 (complemento): Método register ausente no provider, mas chamado
-  //                             pelo FormScreen. Adicionado delegando ao AuthService.
   Future<void> register(String nome, String email, String password) async {
     _isLoading = true;
     notifyListeners();
     try {
       await _authService.register(nome, email, password);
-    } catch (e) {
-      rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // CORREÇÃO 3: logout ausente, necessário para ProfileScreen.
-  void logout() {
-    _user = null;
+  Future<bool> updateUser(Map<String, dynamic> dados) async {
+    _isLoading = true;
     notifyListeners();
+    try {
+      await _authService.updateUserProfile(
+        nome: dados['nome'],
+        email: dados['email'],
+        novaSenha: dados['novaSenha'],
+      );
+      notifyListeners(); // Força a atualização dos componentes que usam 'user'
+      return true;
+    } catch (e) {
+      debugPrint("Erro na atualização: $e");
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
-  Future<bool> updateUser(
-    Map<String, dynamic> dados,
-  ) async {
-    try {
-      final usuarioAtualizado = await _authService.updateUser(dados);
-
-      print('RETORNO UPDATE: $usuarioAtualizado');
-      print('TIPO RETORNO: ${usuarioAtualizado.runtimeType}');
-
-      _user = usuarioAtualizado;
-
-      notifyListeners();
-
-      return true;
-    } catch (e, s) {
-      print('ERRO UPDATE USER => $e');
-      print(s);
-
-      return false;
-    }
+  void logout() {
+    _authService.logout();
+    notifyListeners();
   }
 }

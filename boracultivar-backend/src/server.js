@@ -1,11 +1,10 @@
-// src/server.js
+import dotenv from "dotenv";
+dotenv.config();
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import path from "path";
 import chatRoutes from "./routes/chatRoutes.js";
-import authRoutes from "./routes/authRoutes.js";
-import soloRoutes from "./routes/soloRoutes.js"; // 🆕 Importando as novas rotas do solo
+import soloRoutes from "./routes/soloRoutes.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 
 dotenv.config();
@@ -13,30 +12,16 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors({ origin: "*" }));
+app.use(cors());
 app.use(express.json());
 
-// 🆕 Torna a pasta 'uploads' pública para que as imagens fiquem acessíveis via URL
-// Exemplo: http://localhost:3000/uploads/solo-12345.jpg
 app.use("/uploads", express.static(path.resolve("uploads")));
 
-// ─── Definição de Rotas do Sistema ───────────────────────────────────────────
-app.use("/api", chatRoutes);
-app.use("/api", authRoutes);
-app.use("/api", soloRoutes); // 🆕 Injetando a rota de análise de solos
+// Apenas rotas de IA (a autenticação agora é via Supabase direto)
+app.use("/api/chat", chatRoutes);
+app.use("/api/solo", soloRoutes);
 
-app.get("/health", (_req, res) => {
-  res.json({
-    status: "ok",
-    message: "Bora Cultivar API está rodando perfeitamente!",
-  });
-});
-
+app.get("/health", (req, res) => res.json({ status: "ok" }));
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`=======================================================`);
-  console.log(`✅ Servidor Bora Cultivar rodando em: http://localhost:${PORT}`);
-  console.log(`=======================================================`);
-});
-
+app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
